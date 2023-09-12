@@ -11,10 +11,8 @@ import base64
 def STT(audio):
     # file save
     filename = "input.mp3"
-    wav_file = open(filename, "wb")
-    wav_file.write(audio.tobytes())
-    wav_file.close()
-
+    audio.export(filename, format="mp3")
+    
     # Open music file
     audio_file = open(filename, "rb")
     # Obtaining text using the whisper model
@@ -42,9 +40,9 @@ def TTS(response):
         md = f"""
             <audio autoplay="True">
             <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
-            </audio>    
+            </audio>
             """
-        st.markdown(md, unsafe_allow_html=True)
+        st.markdown(md,unsafe_allow_html=True,)
     # file remove
     os.remove(filename)
 
@@ -53,10 +51,7 @@ def main():
     # basic config
     st.set_page_config(
         page_title="Voice Assistant Program",
-        layout="wide"
-    )
-
-    flag_start = False
+        layout="wide")
 
     # session state reset
     if "chat" not in st.session_state:
@@ -65,12 +60,11 @@ def main():
     if "messages" not in st.session_state:
         st.session_state["messages"] = [{"role": "system", "content": "You are a thoughtful assistant. Respond to all input in 25 words and answer in Korea"}]
 
-    if "check_audio" not in st.session_state:
-        st.session_state["check_audio"] = []
+    if "check_reset" not in st.session_state:
+        st.session_state["check_restet"] = []
 
     # title
     st.header("Voice Assistant Program")
-
     # dividing line
     st.markdown("---")
 
@@ -105,6 +99,7 @@ def main():
             # Reset Logic
             st.session_state["chat"] = []
             st.session_state["messages"] = [{"role": "system", "content": "You are a thoughtful assistant. Respond to all input in 25 words and answer in Korea"}]
+            st.session_state["check_restet"] = True
 
     # Function implementation
     col1, col2 = st.columns(2)
@@ -113,9 +108,9 @@ def main():
         st.subheader("Ask a question")
         # voice record icon
         audio = audiorecorder("Click to record", "recording...")
-        if len(audio) > 0 and not np.array_equal(audio, st.session_state["check_audio"]): # When you start recording
+        if (audio.duration_seconds > 0) and (st.session_state["check_reset"]==False): # When you start recording
             # voice playback
-            st.audio(audio.tobytes())
+            st.audio(audio.export().read())
             # Extract text from sound files
             question = STT(audio)
 
@@ -125,13 +120,14 @@ def main():
             # Save question content
             st.session_state["messages"] = st.session_state["messages"] + [{"role": "user", "content": question}]
             # Store audio information to check audio buffer
-            st.session_state["check_audio"] = audio
-            flag_start = True
+            #st.session_state["check_audio"] = audio
+            #flag_start = True
 
     with col2:
         # right area
         st.subheader("Question/Answer")
-        if flag_start:
+        #if flag_start:
+        if  (audio.duration_seconds > 0)  and (st.session_state["check_reset"]==False):
             # Get answers from chatGPT
             response = ask_gpt(st.session_state["messages"], model)
 
@@ -153,6 +149,8 @@ def main():
 
             # Create and play voice files using gTTS
             TTS(response)
+        else:
+            st.session_state["check_reset"] = False    
 
 if __name__=="__main__":
     main()        
